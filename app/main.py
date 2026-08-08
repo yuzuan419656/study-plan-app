@@ -12,6 +12,20 @@ app = FastAPI(
 tasks: list[TaskResponse] = []
 
 
+
+def find_task_index(task_id: int) -> int:
+    for index, task in enumerate(tasks):
+        if task.id == task_id:
+            return index
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Task not found",
+    )
+
+
+
+
 @app.get("/")
 def title():
     return {"message": "Welcome to the Study Plan API!"}
@@ -31,18 +45,8 @@ def get_tasks():
 def get_task(
     task_id: int = Path(gt=0)
 ):
-    task = next(
-        (task for task in tasks if task.id == task_id),
-        None,
-    )
-
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    return task
+    task_index = find_task_index(task_id)
+    return tasks[task_index]
 
 
 @app.post(
@@ -57,3 +61,19 @@ def create_task(task: TaskCreate):
 
     tasks.append(new_task)
     return new_task
+
+
+@app.put("/tasks/{task_id}", response_model=TaskResponse)
+def update_task(
+    updated_task: TaskCreate,
+    task_id: int = Path(gt=0),
+):
+    task_index = find_task_index(task_id)
+
+    task = TaskResponse(
+        id=task_id,
+        **updated_task.model_dump(),
+    )
+
+    tasks[task_index] = task
+    return task
