@@ -20,19 +20,6 @@ app = FastAPI(
 )
 
 
-tasks: list[TaskResponse] = []
-next_task_id: int = 1
-
-
-def find_task_index(task_id: int) -> int:
-    for index, task in enumerate(tasks):
-        if task.id == task_id:
-            return index
-
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Task not found",
-    )
 
 
 def get_db_task_or_404(
@@ -100,20 +87,27 @@ def create_task(
     return db_task
 
 
-@app.put("/tasks/{task_id}", response_model=TaskResponse)
+@app.put(
+        "/tasks/{task_id}", 
+        response_model=TaskResponse,
+    )
 def update_task(
     updated_task: TaskCreate,
     task_id: int = Path(gt=0),
+    db: Session = Depends(get_db)
 ):
-    task_index = find_task_index(task_id)
+    db_task = get_db_task_or_404(db, task_id)
 
-    task = TaskResponse(
-        id=task_id,
-        **updated_task.model_dump(),
-    )
+    db_task.title = updated_task.title
+    db_task.description = updated_task.description
+    db_task.status = updated_task.status.value
+    db_task.due_date = updated_task.due_date
+    db_task.estimated_minutes = updated_task.estimated_minutes
 
-    tasks[task_index] = task
-    return task
+    db.commit()
+    db.refresh(db_task)
+
+    return db_task
 
 
 @app.delete(
@@ -121,10 +115,12 @@ def update_task(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_task(
-    task_id: int = Path(gt=0)
+    task_id: int = Path(gt=0),
+    db: Session = Depends(get_db)
 ):
-    task_index = find_task_index(task_id)
-    tasks.pop(task_index)
+    db_task = get_db_task_or_404(db, task_id)
 
-    
+    db.delete(db_task)
+    db.commit()
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
