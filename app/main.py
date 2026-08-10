@@ -6,6 +6,7 @@ from fastapi import (
     Response,
     Depends,
 )
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -34,6 +35,20 @@ def find_task_index(task_id: int) -> int:
     )
 
 
+def get_db_task_or_404(
+        db: Session,
+        task_id: int,
+) -> Task:
+    db_task = db.get(Task, task_id)
+
+    if db_task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+
+    return db_task
+
 
 
 @app.get("/")
@@ -47,16 +62,22 @@ def health_check():
 
 
 @app.get("/tasks", response_model=list[TaskResponse])
-def get_tasks():
-    return tasks
+def get_tasks(
+    db: Session = Depends(get_db)
+):
+    statement = select(Task).order_by(Task.id)
+    db_tasks = db.scalars(statement).all()
+
+
+    return db_tasks
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)
 def get_task(
-    task_id: int = Path(gt=0)
+    task_id: int = Path(gt=0),
+    db: Session = Depends(get_db)
 ):
-    task_index = find_task_index(task_id)
-    return tasks[task_index]
+    return get_db_task_or_404(db, task_id)
 
 
 @app.post(
