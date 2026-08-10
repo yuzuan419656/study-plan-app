@@ -1,5 +1,15 @@
-from fastapi import FastAPI, status, Path, HTTPException, Response
+from fastapi import (
+    FastAPI, 
+    status, 
+    Path, 
+    HTTPException, 
+    Response,
+    Depends,
+)
+from sqlalchemy.orm import Session
 
+from app.database import get_db
+from app.models import Task
 from app.schemas import TaskCreate, TaskResponse
 
 app = FastAPI(
@@ -53,17 +63,20 @@ def get_task(
         "/tasks", 
         response_model=TaskResponse, 
         status_code=status.HTTP_201_CREATED)
-def create_task(task: TaskCreate):
-    global next_task_id
+def create_task(
+    task: TaskCreate,
+    db: Session = Depends(get_db),
+    ):
+    task_data = task.model_dump()
+    task_data["status"] = task.status.value
 
-    new_task = TaskResponse(
-        id=next_task_id,
-        **task.model_dump(),
-    )
+    db_task = Task(**task_data)
 
-    tasks.append(new_task)
-    next_task_id += 1
-    return new_task
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+
+    return db_task
 
 
 @app.put("/tasks/{task_id}", response_model=TaskResponse)
