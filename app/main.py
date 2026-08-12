@@ -52,26 +52,6 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.post(
-        "/tasks", 
-        response_model=TaskResponse, 
-        status_code=status.HTTP_201_CREATED)
-def create_task(
-    task: TaskCreate,
-    db: Session = Depends(get_db),
-    ):
-    task_data = task.model_dump()
-    task_data["status"] = task.status.value
-
-    db_task = Task(**task_data)
-
-    db.add(db_task)
-    db.commit()
-    db.refresh(db_task)
-
-    return db_task
-
-
 @app.put(
         "/tasks/{task_id}", 
         response_model=TaskResponse,

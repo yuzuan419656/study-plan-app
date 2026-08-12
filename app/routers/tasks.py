@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.crud import task as task_crud
 from app.database import get_db
-from app.schemas import TaskResponse
+from app.schemas import TaskCreate, TaskResponse
 
 
 router = APIRouter(
@@ -40,3 +40,15 @@ def get_task(
         ) 
 
     return db_task
+
+
+@router.post(
+    "",
+    response_model=TaskResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def create_task(
+    task: TaskCreate,
+    db: Session = Depends(get_db),
+):
+    return task_crud.create_task(db, task)
