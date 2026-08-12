@@ -6,12 +6,14 @@ from fastapi import (
     Response,
     Depends,
 )
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Task
 from app.schemas import TaskCreate, TaskResponse
+
+from app.routers import tasks as tasks_router
+
 
 app = FastAPI(
     title="Study Plan API",
@@ -19,6 +21,8 @@ app = FastAPI(
     version="0.1.0"
 )
 
+
+app.include_router(tasks_router.router)
 
 
 
@@ -46,25 +50,6 @@ def title():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-
-@app.get("/tasks", response_model=list[TaskResponse])
-def get_tasks(
-    db: Session = Depends(get_db)
-):
-    statement = select(Task).order_by(Task.id)
-    db_tasks = db.scalars(statement).all()
-
-
-    return db_tasks
-
-
-@app.get("/tasks/{task_id}", response_model=TaskResponse)
-def get_task(
-    task_id: int = Path(gt=0),
-    db: Session = Depends(get_db)
-):
-    return get_db_task_or_404(db, task_id)
 
 
 @app.post(
