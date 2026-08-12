@@ -32,3 +32,31 @@ def create_task(
     db.refresh(db_task)
 
     return db_task
+
+
+def update_task(
+        db: Session,
+        db_task: Task,
+        updated_task: TaskCreate,
+) -> Task:
+    db_task.title = updated_task.title
+    db_task.description = updated_task.description
+    db_task.status = updated_task.status.value
+    db_task.due_date = updated_task.due_date
+    db_task.estimated_minutes = updated_task.estimated_minutes
+
+    db.commit()
+    db.refresh(db_task)
+
+    return db_task
+
+
+def delete_task(
+        db: Session,
+        db_task: Task,
+) -> None:
+    db.delete(db_task)
+    db.commit()
+
+    
+
